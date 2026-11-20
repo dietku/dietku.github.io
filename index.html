@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DietKu</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DietKu">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#163a5a">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manifest.json">
+<style>
+html,body{margin:0;height:100%;background:#163a5a;overflow:hidden}
+iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}
+#load{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#f3f7fb;font:600 16px system-ui,sans-serif;transition:opacity .3s}
+#load img{width:96px;height:96px;border-radius:22px}
+#load a{color:#ffb4a3}
+</style>
+</head>
+<body>
+<div id="load"><img src="icon-192.png" alt=""><div>Membuka DietKu…</div><a id="alt" hidden>Tak terbuka? Tekan sini</a></div>
+<iframe id="app" title="DietKu" allow="camera; clipboard-write"></iframe>
+<script>
+{
+  const APP_URL = 'https://script.google.com/macros/s/AKfycbzqua79jXHwMnjChtxxU6ohvvjOuV1QvnI0yMt5Jdw-gAs5ZKq7NPrYUlLbdcbcSsXxkQ/exec';
+  const f = document.getElementById('app'), l = document.getElementById('load'), a = document.getElementById('alt');
+  a.href = APP_URL;
+  f.onload = () => { l.style.opacity = 0; setTimeout(() => l.remove(), 300); };
+  f.src = APP_URL;
+  setTimeout(() => { a.hidden = false; }, 8000);
+}
+</script>
+</body>
+</html>
