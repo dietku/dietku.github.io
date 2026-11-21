@@ -31,6 +31,23 @@ iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}
   f.onload = () => { l.style.opacity = 0; setTimeout(() => l.remove(), 300); };
   f.src = APP_URL;
   setTimeout(() => { a.hidden = false; }, 8000);
+
+  // Auto log masuk: simpan login "Ingat saya" di page ini (storan kekal di iPhone),
+  // dan hantar hanya kepada app DietKu dalam iframe (domain Google Apps Script).
+  const KEY = 'dietku-login';
+  const fromApp = o => { try { return /\.googleusercontent\.com$/.test(new URL(o).hostname); } catch (_) { return false; } };
+  addEventListener('message', e => {
+    const d = e.data;
+    if (!fromApp(e.origin) || !d || typeof d.dietku !== 'string') return;
+    if (d.dietku === 'hello') {
+      let v = null; try { v = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
+      e.source.postMessage({ dietku: 'login', u: v && v.u, p: v && v.p }, e.origin);
+    } else if (d.dietku === 'save' && typeof d.u === 'string' && typeof d.p === 'string' && d.u.length < 100 && d.p.length < 200) {
+      try { localStorage.setItem(KEY, JSON.stringify({ u: d.u, p: d.p })); } catch (_) {}
+    } else if (d.dietku === 'clear') {
+      try { localStorage.removeItem(KEY); } catch (_) {}
+    }
+  });
 }
 </script>
 </body>
