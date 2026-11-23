@@ -13,41 +13,108 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="manifest" href="manifest.json">
 <style>
-html,body{margin:0;height:100%;background:linear-gradient(160deg,#ffd3e6,#f2b8ff);overflow:hidden}
-iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}
-#load{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#4a1d3f;font:600 16px system-ui,sans-serif;transition:opacity .3s}
-#load img{width:96px;height:96px;border-radius:22px}
+html,body{margin:0;height:100%;background:linear-gradient(160deg,#ffd3e6,#f2b8ff);font-family:-apple-system,system-ui,sans-serif;color:#4a1d3f}
+*{box-sizing:border-box}
+iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff;display:none}
+#load{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-weight:600;font-size:16px;transition:opacity .3s}
+#load img,.kad img{width:96px;height:96px;border-radius:22px}
 #load a{color:#7a1c5a}
+#masuk{min-height:100%;display:none;align-items:center;justify-content:center;padding:24px;padding-top:max(24px,env(safe-area-inset-top))}
+.kad{width:100%;max-width:380px;background:rgba(255,255,255,.9);border-radius:26px;padding:28px 22px;box-shadow:0 14px 40px rgba(122,28,90,.18);text-align:center}
+.kad h1{margin:12px 0 2px;font-size:28px;background:linear-gradient(90deg,#ff5fa8,#b06cf0);-webkit-background-clip:text;background-clip:text;color:transparent}
+.kad p{margin:0 0 18px;font-size:14px;opacity:.7}
+form{text-align:left}
+label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
+input[type=text],input[type=password]{width:100%;padding:14px 16px;font-size:16px;border:2px solid #f3d3ea;border-radius:14px;background:#fff;color:#4a1d3f;outline:none}
+input:focus{border-color:#c48cf0}
+.ingat{display:flex;align-items:center;gap:8px;font-weight:500;font-size:14px;margin-top:14px}
+.ingat input{width:18px;height:18px;accent-color:#ff5fa8}
+button{width:100%;margin-top:20px;padding:15px;font-size:17px;font-weight:700;color:#fff;border:0;border-radius:14px;background:linear-gradient(90deg,#ff7ab8,#b88af2)}
+button:disabled{opacity:.6}
+#err{color:#c0396b;font-size:14px;min-height:18px;margin-top:12px;text-align:center}
+#daftar{display:inline-block;margin-top:16px;font-size:14px;color:#8a4fd0;text-decoration:none}
 </style>
 </head>
 <body>
 <div id="load"><img src="icon-192.png" alt=""><div>Membuka DietKu…</div><a id="alt" hidden>Tak terbuka? Tekan sini</a></div>
+
+<div id="masuk">
+  <div class="kad">
+    <img src="icon-192.png" alt="">
+    <h1>DietKu</h1>
+    <p>Log masuk untuk teruskan</p>
+    <!-- Borang di halaman utama (bukan iframe) supaya iPhone boleh simpan & autofill password -->
+    <form id="f" action="/" method="post" autocomplete="on">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      <label for="password">Kata laluan</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+      <label class="ingat"><input type="checkbox" id="ingat" checked> Ingat saya</label>
+      <button type="submit" id="btn">Log masuk</button>
+      <div id="err"></div>
+    </form>
+    <a id="daftar" href="#">Belum ada akaun? Daftar baru</a>
+  </div>
+</div>
+
 <iframe id="app" title="DietKu" allow="camera; clipboard-write"></iframe>
 <script>
 {
-  const APP_URL = 'https://script.google.com/macros/s/AKfycbzqua79jXHwMnjChtxxU6ohvvjOuV1QvnI0yMt5Jdw-gAs5ZKq7NPrYUlLbdcbcSsXxkQ/exec';
-  const f = document.getElementById('app'), l = document.getElementById('load'), a = document.getElementById('alt');
-  a.href = APP_URL;
-  f.onload = () => { l.style.opacity = 0; setTimeout(() => l.remove(), 300); };
-  f.src = APP_URL;
-  setTimeout(() => { a.hidden = false; }, 8000);
+const APP_URL = 'https://script.google.com/macros/s/AKfycbzqua79jXHwMnjChtxxU6ohvvjOuV1QvnI0yMt5Jdw-gAs5ZKq7NPrYUlLbdcbcSsXxkQ/exec';
+const KEY = 'dietku-token';
+const $ = id => document.getElementById(id);
+const st = {
+  get: () => { try { return localStorage.getItem(KEY) || sessionStorage.getItem(KEY); } catch (_) { return null; } },
+  set: (t, kekal) => { try { (kekal ? localStorage : sessionStorage).setItem(KEY, t); (kekal ? sessionStorage : localStorage).removeItem(KEY); } catch (_) {} },
+  del: () => { try { localStorage.removeItem(KEY); sessionStorage.removeItem(KEY); } catch (_) {} }
+};
+// Buang simpanan lama (username/password teks biasa) — kini guna token sahaja
+try { localStorage.removeItem('dietku-login'); } catch (_) {}
 
-  // Auto log masuk: simpan login "Ingat saya" di page ini (storan kekal di iPhone),
-  // dan hantar hanya kepada app DietKu dalam iframe (domain Google Apps Script).
-  const KEY = 'dietku-login';
-  const fromApp = o => { try { return /\.googleusercontent\.com$/.test(new URL(o).hostname); } catch (_) { return false; } };
-  addEventListener('message', e => {
-    const d = e.data;
-    if (!fromApp(e.origin) || !d || typeof d.dietku !== 'string') return;
-    if (d.dietku === 'hello') {
-      let v = null; try { v = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
-      e.source.postMessage({ dietku: 'login', u: v && v.u, p: v && v.p }, e.origin);
-    } else if (d.dietku === 'save' && typeof d.u === 'string' && typeof d.p === 'string' && d.u.length < 100 && d.p.length < 200) {
-      try { localStorage.setItem(KEY, JSON.stringify({ u: d.u, p: d.p })); } catch (_) {}
-    } else if (d.dietku === 'clear') {
-      try { localStorage.removeItem(KEY); } catch (_) {}
-    }
-  });
+$('alt').href = APP_URL;
+let timer;
+function buka(token) {
+  $('masuk').style.display = 'none';
+  const l = $('load'), f = $('app');
+  l.style.display = 'flex'; l.style.opacity = 1;
+  f.onload = () => { if (f.src === 'about:blank') return; f.style.display = 'block'; l.style.opacity = 0; setTimeout(() => { l.style.display = 'none'; }, 300); };
+  f.src = APP_URL + (token ? '?t=' + encodeURIComponent(token) : '');
+  clearTimeout(timer); timer = setTimeout(() => { $('alt').hidden = false; }, 8000);
+}
+function login(mesej) {
+  const f = $('app'); f.style.display = 'none'; f.src = 'about:blank';
+  $('load').style.display = 'none';
+  $('masuk').style.display = 'flex';
+  $('err').textContent = mesej || '';
+}
+
+$('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const b = $('btn'); b.disabled = true; b.textContent = 'Menyemak…'; $('err').textContent = '';
+  try {
+    const r = await fetch(APP_URL, { method: 'POST', body: JSON.stringify({ action: 'login', username: $('username').value.trim(), password: $('password').value }) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'Log masuk gagal');
+    st.set(j.token, $('ingat').checked);
+    buka(j.token);
+  } catch (err) {
+    $('err').textContent = (err && err.message) || 'Ralat sambungan. Cuba lagi.';
+  } finally { b.disabled = false; b.textContent = 'Log masuk'; }
+});
+
+$('daftar').addEventListener('click', e => { e.preventDefault(); buka(null); });
+
+// Mesej dari app DietKu (domain Google Apps Script)
+const fromApp = o => { try { return /\.googleusercontent\.com$/.test(new URL(o).hostname); } catch (_) { return false; } };
+addEventListener('message', e => {
+  const d = e.data;
+  if (!fromApp(e.origin) || !d || typeof d.dietku !== 'string') return;
+  if (d.dietku === 'token' && typeof d.token === 'string' && d.token.length < 100) st.set(d.token, true);
+  else if (d.dietku === 'logout') { st.del(); login('Anda telah log keluar.'); }
+});
+
+const t = st.get();
+t ? buka(t) : login();
 }
 </script>
 </body>
